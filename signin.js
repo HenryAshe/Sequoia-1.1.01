@@ -10,7 +10,7 @@ form.addEventListener('submit', (e) => {
   localStorage.setItem('sequoia_user', JSON.stringify({ email }));
   // optionally store api base for dev (change to your Render URL)
   if (!localStorage.getItem('SEQUOIA_API_BASE')) {
-    localStorage.setItem('SEQUOIA_API_BASE', 'https://your-render-server.example.com');
+    localStorage.setItem('SEQUOIA_API_BASE', 'https://sequoia-1-1-01.onrender.com');
   }
 
   // go to dashboard
