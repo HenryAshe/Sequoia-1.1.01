@@ -126,14 +126,22 @@ def get_announcements():
 
 @app.route('/profile')
 def get_profile():
-    user = canvas.get_user('self')
-    profile = {
-        "name": user.short_name,
-        "primary_email": getattr(user, 'email', 'N/A'),
-        "timezone": user.time_zone,  # Essential for date conversion!
-        "bio": getattr(user, 'bio', '')
-    }
-    return jsonify(profile)
+    try:
+        # Get the 'self' user object
+        user = canvas.get_user('self')
+        
+        # We use getattr() with a default value to prevent crashes 
+        # if a specific field is hidden by Auburn's Canvas settings
+        profile = {
+            "name": getattr(user, 'short_name', 'Auburn Student'),
+            "timezone": getattr(user, 'time_zone', 'America/Chicago'),
+            "id": getattr(user, 'id', 'N/A')
+        }
+        return jsonify(profile)
+    except Exception as e:
+        # This will show the EXACT error in your browser instead of a 500 error
+        return jsonify({"error": str(e)}), 500
+
 
 
 if __name__ == '__main__':
