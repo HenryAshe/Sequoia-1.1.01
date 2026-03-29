@@ -5,14 +5,8 @@ from canvasapi import Canvas
 app = Flask(__name__)
 
 # CONFIGURATION
-# os.environ.get(KEY, DEFAULT) looks for the secret on Render.
-# If it doesn't find it, it uses the "Default" string provided.
-CANVAS_URL = os.environ.get("CANVAS_URL", "https://auburn.instructure.com")
-CANVAS_API_KEY = os.environ.get("CANVAS_API_KEY")
-
-if not CANVAS_API_KEY:
-    # This helps you troubleshoot locally if you forgot to set the key
-    print("CRITICAL ERROR: No CANVAS_API_KEY found in Environment Variables!")
+CANVAS_URL = "https://auburn.instructure.com" # Replace this
+CANVAS_API_KEY = "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"        # Replace this
 
 # Initialize the Canvas object
 canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
@@ -20,8 +14,20 @@ canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
 @app.route('/')
 def home():
     return "Canvas Analytics Test Server is Live!"
+# Add this helper to the top of your app.py
+def safe_data(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            # This ensures your website doesn't just "white screen"
+            return jsonify({"error": str(e), "status": "failed"}), 500
+    wrapper.__name__ = func.__name__
+    return wrapper
 
+# Use it like this on your routes:
 @app.route('/my-courses')
+@safe_data
 def get_courses():
     # Fetches active courses for the student
     courses = canvas.get_courses(enrollment_state='active')
