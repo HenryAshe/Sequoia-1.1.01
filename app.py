@@ -1,11 +1,18 @@
+import os
 from flask import Flask, jsonify
 from canvasapi import Canvas
 
 app = Flask(__name__)
 
 # CONFIGURATION
-CANVAS_URL = "https://auburn.instructure.com" # Replace this
-CANVAS_API_KEY = "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"        # Replace this
+# os.environ.get(KEY, DEFAULT) looks for the secret on Render.
+# If it doesn't find it, it uses the "Default" string provided.
+CANVAS_URL = os.environ.get("CANVAS_URL", "https://auburn.instructure.com")
+CANVAS_API_KEY = os.environ.get("CANVAS_API_KEY")
+
+if not CANVAS_API_KEY:
+    # This helps you troubleshoot locally if you forgot to set the key
+    print("CRITICAL ERROR: No CANVAS_API_KEY found in Environment Variables!")
 
 # Initialize the Canvas object
 canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
