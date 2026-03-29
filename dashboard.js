@@ -4,7 +4,7 @@ if (!user) {
   window.location.href = '/';
 }
 
-const API_BASE = localStorage.getItem('SEQUOIA_API_BASE') || 'https://your-render-server.example.com';
+const API_BASE = localStorage.getItem('SEQUOIA_API_BASE') || 'https://sequoia-1-1-01.onrender.com';
 
 const classesList = document.getElementById('classes-list');
 const assignmentsList = document.getElementById('assignments-list');
