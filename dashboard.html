@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sequoia — Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav class="topbar">
+    <div class="brand-inline">
+      <div class="logo small">Sequoia</div>
+    </div>
+    <div class="actions">
+      <button id="signout" class="btn">Sign out</button>
+    </div>
+  </nav>
+
+  <main class="container dashboard">
+    <section class="panel classes">
+      <h3>Your Classes</h3>
+      <ul id="classes-list" class="list"></ul>
+    </section>
+
+    <section class="panel assignments">
+      <h3>Upcoming Assignments</h3>
+      <ul id="assignments-list" class="list"></ul>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
