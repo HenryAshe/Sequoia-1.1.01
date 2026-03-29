@@ -1,86 +1,51 @@
-// dashboard.js
-const user = JSON.parse(localStorage.getItem('sequoia_user') || 'null');
-if (!user) {
-  window.location.href = '/';
+const API_BASE = localStorage.getItem('SEQUOIA_API_BASE');
+
+async function init() {
+    if (!API_BASE) { window.location.href = './index.html'; return; }
+
+    try {
+        // 1. Load Profile
+        const profile = await fetch(`${API_BASE}/profile`).then(r => r.json());
+        document.getElementById('user-greeting').innerText = `War Eagle, ${profile.name}!`;
+
+        // 2. Load Courses
+        const courses = await fetch(`${API_BASE}/my-courses`).then(r => r.json());
+        const courseGrid = document.getElementById('course-grid');
+        courseGrid.innerHTML = courses.map(c => `
+            <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+                <h3 class="text-xl font-bold text-[#1B3022] mb-1">${c.course_name}</h3>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-tighter">Course ID: ${c.id}</p>
+                <div class="mt-4 h-1 w-0 group-hover:w-full bg-[#3A5A40] transition-all duration-500"></div>
+            </div>
+        `).join('');
+
+        // 3. Load Assignments (from the full-data route)
+        const fullData = await fetch(`${API_BASE}/full-data`).then(r => r.json());
+        const assignList = document.getElementById('assignment-list');
+        
+        let allAssignments = [];
+        fullData.forEach(course => {
+            course.assignments.forEach(a => {
+                allAssignments.push({...a, course: course.course_name});
+            });
+        });
+
+        assignList.innerHTML = allAssignments.slice(0, 10).map(a => `
+            <div class="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                <div>
+                    <h4 class="font-bold text-slate-800">${a.title}</h4>
+                    <p class="text-xs text-[#3A5A40] font-bold uppercase">${a.course}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-black text-slate-600">${a.points_possible || 0} pts</p>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">${a.due_at ? new Date(a.due_at).toLocaleDateString() : 'No Date'}</p>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (e) {
+        console.error(e);
+    }
 }
 
-const API_BASE = localStorage.getItem('SEQUOIA_API_BASE') || 'https://sequoia-1-1-01.onrender.com';
-
-const classesList = document.getElementById('classes-list');
-const assignmentsList = document.getElementById('assignments-list');
-const signoutBtn = document.getElementById('signout');
-
-signoutBtn.addEventListener('click', () => {
-  localStorage.removeItem('sequoia_user');
-  window.location.href = '/';
-});
-
-async function fetchJSON(path) {
-  try {
-    const res = await fetch(API_BASE + path, { credentials: 'include' });
-    if (!res.ok) throw new Error('Network error');
-    return await res.json();
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-}
-
-function renderClasses(classes){
-  classesList.innerHTML = '';
-  if (!classes || classes.length === 0) {
-    classesList.innerHTML = '<li class="item"><div class="meta">No classes found</div></li>';
-    return;
-  }
-  classes.forEach(c => {
-    const li = document.createElement('li');
-    li.className = 'item';
-    li.innerHTML = `<div>
-                      <div style="font-weight:600">${escapeHtml(c.name || c.course_name || 'Untitled')}</div>
-                      <div class="meta">${escapeHtml(c.code || c.course_code || '')}</div>
-                    </div>
-                    <div class="meta">${escapeHtml(c.term || '')}</div>`;
-    classesList.appendChild(li);
-  });
-}
-
-function renderAssignments(assignments){
-  assignmentsList.innerHTML = '';
-  if (!assignments || assignments.length === 0) {
-    assignmentsList.innerHTML = '<li class="item"><div class="meta">No upcoming assignments</div></li>';
-    return;
-  }
-
-  // sort by due date ascending
-  assignments.sort((a,b) => new Date(a.due_at || a.due) - new Date(b.due_at || b.due));
-
-  assignments.forEach(a => {
-    const li = document.createElement('li');
-    li.className = 'item';
-    const due = new Date(a.due_at || a.due || a.due_date || null);
-    const dueText = due && !isNaN(due) ? due.toLocaleString() : 'No due date';
-    li.innerHTML = `<div>
-                      <div style="font-weight:600">${escapeHtml(a.title || a.name || 'Untitled')}</div>
-                      <div class="meta">${escapeHtml(a.course || a.course_name || a.course_code || '')}</div>
-                    </div>
-                    <div class="assignment-due">${escapeHtml(dueText)}</div>`;
-    assignmentsList.appendChild(li);
-  });
-}
-
-function escapeHtml(s = ''){
-  return String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-}
-
-async function loadData(){
-  // Expected server endpoints (adjust if different):
-  // GET /api/classes -> [{ id, name, course_code, term }]
-  // GET /api/assignments/upcoming -> [{ id, title, course, due_at }]
-  const classes = await fetchJSON('/api/classes');
-  const assignments = await fetchJSON('/api/assignments/upcoming');
-
-  renderClasses(classes || []);
-  renderAssignments(assignments || []);
-}
-
-loadData();
+init();
