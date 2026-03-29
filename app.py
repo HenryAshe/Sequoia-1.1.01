@@ -3,20 +3,19 @@ from flask import Flask, jsonify
 from flask_cors import CORS # Add this
 from canvasapi import Canvas
 from concurrent.futures import ThreadPoolExecutor
-import time
+from flask_caching import Cache
 
 app = Flask(__name__)
 CORS(app) # This allows any website to "talk" to your API
 
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
-CANVAS_API_KEY = "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"        # Replace this
+CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") 
 
-CACHE = {
-    "assignments": None,
-    "timestamp": 0
-}
-CACHE_DURATION = 60  # seconds
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 60
+})
 
 # Initialize the Canvas object
 canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
@@ -45,11 +44,9 @@ def get_courses():
     return jsonify(data)
 
 @app.route('/assignments')
+@cache.cached(timeout=60)
 @safe_data
 def get_assignments_fast():
-    if CACHE["assignments"] and time.time() - CACHE["timestamp"] < CACHE_DURATION:
-        return jsonify(CACHE["assignments"])
-
     courses = list(canvas.get_courses(enrollment_state='active'))
 
     def fetch_course_data(course):
@@ -71,10 +68,12 @@ def get_assignments_fast():
 
     all_assignments = [a for r in results for a in r]
 
-    CACHE["assignments"] = all_assignments
-    CACHE["timestamp"] = time.time()
-
     return jsonify(all_assignments)
+
+@app.route('/refresh-assignments')
+def refresh_assignments():
+    cache.delete_memoized(get_assignments_fast)
+    return {"status": "cleared"}
 
 @app.route('/schedule')
 def get_schedule():
@@ -148,5 +147,5 @@ def get_profile():
 
 
 if __name__ == '__main__':
-    # Starts the local server on http://127.0.0.1:5000
+    # Starts the local server on http://127.0.0.1:5001
     app.run(debug=True, port=5001)
