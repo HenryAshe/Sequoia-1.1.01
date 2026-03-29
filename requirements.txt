@@ -3,3 +3,4 @@ canvasapi
 pytz
 gunicorn
 flask-cors
+Flask-Caching
