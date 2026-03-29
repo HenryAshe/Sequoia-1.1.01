@@ -2,6 +2,8 @@ import os
 from flask import Flask, jsonify
 from flask_cors import CORS # Add this
 from canvasapi import Canvas
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 app = Flask(__name__)
 CORS(app) # This allows any website to "talk" to your API
@@ -9,6 +11,12 @@ CORS(app) # This allows any website to "talk" to your API
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
 CANVAS_API_KEY = "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"        # Replace this
+
+CACHE = {
+    "assignments": None,
+    "timestamp": 0
+}
+CACHE_DURATION = 60  # seconds
 
 # Initialize the Canvas object
 canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
@@ -36,41 +44,37 @@ def get_courses():
     data = [{"id": c.id, "course_name": getattr(c, 'name', 'N/A')} for c in courses]
     return jsonify(data)
 
-@app.route('/full-data')
-def get_full_data():
-    all_data = []
-    courses = canvas.get_courses(enrollment_state='active')
+@app.route('/assignments')
+@safe_data
+def get_assignments_fast():
+    if CACHE["assignments"] and time.time() - CACHE["timestamp"] < CACHE_DURATION:
+        return jsonify(CACHE["assignments"])
 
-    for course in courses:
-        # 1. Basic Course Info
-        course_info = {
-            "course_name": getattr(course, 'name', 'N/A'),
-            "assignments": [],
-            "weights": []
-        }
+    courses = list(canvas.get_courses(enrollment_state='active'))
 
-        # 2. Fetch Assignments & Due Dates
-        # We only pull 'published' assignments that students can actually see
-        assignments = course.get_assignments()
-        for assignment in assignments:
-            course_info["assignments"].append({
-                "title": assignment.name,
-                "due_at": assignment.due_at,
-                "points_possible": assignment.points_possible
-            })
+    def fetch_course_data(course):
+        try:
+            return [
+                {
+                    "title": a.name,
+                    "due_at": a.due_at,
+                    "points_possible": a.points_possible,
+                    "course": getattr(course, 'name', 'N/A')
+                }
+                for a in course.get_assignments()
+            ]
+        except:
+            return []
 
-        # 3. Fetch Weights (Assignment Groups)
-        # This shows if "Exams" are 40%, "Homework" is 20%, etc.
-        groups = course.get_assignment_groups()
-        for group in groups:
-            course_info["weights"].append({
-                "group_name": group.name,
-                "group_weight": group.group_weight
-            })
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(fetch_course_data, courses))
 
-        all_data.append(course_info)
+    all_assignments = [a for r in results for a in r]
 
-    return jsonify(all_data)
+    CACHE["assignments"] = all_assignments
+    CACHE["timestamp"] = time.time()
+
+    return jsonify(all_assignments)
 
 @app.route('/schedule')
 def get_schedule():
@@ -141,7 +145,6 @@ def get_profile():
     except Exception as e:
         # This will show the EXACT error in your browser instead of a 500 error
         return jsonify({"error": str(e)}), 500
-
 
 
 if __name__ == '__main__':
