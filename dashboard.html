@@ -1,33 +1,47 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sequoia — Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequoia | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <nav class="topbar">
-    <div class="brand-inline">
-      <div class="logo small">Sequoia</div>
-    </div>
-    <div class="actions">
-      <button id="signout" class="btn">Sign out</button>
-    </div>
-  </nav>
+<body class="bg-[#F8FAF8] min-h-screen">
+    <nav class="bg-[#1B3022] text-white p-6 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black tracking-tighter">SEQUOIA</h1>
+            <div id="user-greeting" class="text-sm font-medium italic opacity-80">War Eagle...</div>
+        </div>
+    </nav>
 
-  <main class="container dashboard">
-    <section class="panel classes">
-      <h3>Your Classes</h3>
-      <ul id="classes-list" class="list"></ul>
-    </section>
+    <main class="container mx-auto py-10 px-6">
+        <div class="grid lg:grid-cols-4 gap-10">
+            <!-- Sidebar: Announcements -->
+            <div class="lg:col-span-1 space-y-6">
+                <h2 class="text-lg font-bold text-[#1B3022] uppercase tracking-widest">Updates</h2>
+                <div id="announcement-list" class="space-y-4">
+                    <p class="text-sm text-slate-400 italic">No recent updates.</p>
+                </div>
+            </div>
 
-    <section class="panel assignments">
-      <h3>Upcoming Assignments</h3>
-      <ul id="assignments-list" class="list"></ul>
-    </section>
-  </main>
+            <!-- Main: Classes and Assignments -->
+            <div class="lg:col-span-3 space-y-10">
+                <section>
+                    <h2 class="text-3xl font-black text-[#1B3022] mb-6">Current Courses</h2>
+                    <div id="course-grid" class="grid md:grid-cols-2 gap-6 text-white">
+                        <!-- Courses injected here -->
+                    </div>
+                </section>
 
-  <script src="dashboard.js"></script>
+                <section>
+                    <h2 class="text-2xl font-bold text-[#1B3022] mb-6 border-b pb-2">Upcoming Deadlines</h2>
+                    <div id="assignment-list" class="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y overflow-hidden">
+                        <!-- Assignments injected here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+    <script src="dashboard.js"></script>
 </body>
 </html>
