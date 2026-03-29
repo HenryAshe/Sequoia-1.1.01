@@ -1,8 +1,10 @@
 import os
 from flask import Flask, jsonify
+from flask_cors import CORS # Add this
 from canvasapi import Canvas
 
 app = Flask(__name__)
+CORS(app) # This allows any website to "talk" to your API
 
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
