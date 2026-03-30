@@ -10,7 +10,7 @@ CORS(app) # This allows any website to "talk" to your API
 
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
-CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") 
+CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") or "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"
 
 cache = Cache(app, config={
     'CACHE_TYPE': 'SimpleCache',
@@ -44,23 +44,31 @@ def get_courses():
     return jsonify(data)
 
 @app.route('/assignments')
-@cache.cached(timeout=60)
-@safe_data
+@safe_data  # Wrap the error handling first
+@cache.cached(timeout=60) # Then cache the result
 def get_assignments_fast():
-    courses = list(canvas.get_courses(enrollment_state='active'))
+    # Change this line in get_assignments_fast:
+    courses = canvas.get_courses(enrollment_type='student', enrollment_state='active')
 
     def fetch_course_data(course):
         try:
-            return [
-                {
-                    "title": a.name,
-                    "due_at": a.due_at,
-                    "points_possible": a.points_possible,
-                    "course": getattr(course, 'name', 'N/A')
-                }
-                for a in course.get_assignments()
-            ]
-        except:
+            # Check if course has a name to ensure it's a valid object
+            course_name = getattr(course, 'name', 'Unknown Course')
+            
+            # Explicitly pull assignments
+            assignments = course.get_assignments()
+            
+            results = []
+            for a in assignments:
+                results.append({
+                    "title": getattr(a, 'name', 'Untitled'),
+                    "due_at": getattr(a, 'due_at', None),
+                    "points_possible": getattr(a, 'points_possible', 0),
+                    "course": course_name
+                })
+            return results
+        except Exception as e:
+            print(f"Error fetching for course {course.id}: {e}")
             return []
 
     with ThreadPoolExecutor(max_workers=5) as executor:
