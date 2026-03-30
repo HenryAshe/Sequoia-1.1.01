@@ -2,13 +2,20 @@ import os
 from flask import Flask, jsonify
 from flask_cors import CORS # Add this
 from canvasapi import Canvas
+from concurrent.futures import ThreadPoolExecutor
+from flask_caching import Cache
 
 app = Flask(__name__)
 CORS(app) # This allows any website to "talk" to your API
 
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
-CANVAS_API_KEY = "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"        # Replace this
+CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") 
+
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 60
+})
 
 # Initialize the Canvas object
 canvas = Canvas(CANVAS_URL, CANVAS_API_KEY)
@@ -36,41 +43,45 @@ def get_courses():
     data = [{"id": c.id, "course_name": getattr(c, 'name', 'N/A')} for c in courses]
     return jsonify(data)
 
-@app.route('/full-data')
-def get_full_data():
-    all_data = []
-    courses = canvas.get_courses(enrollment_state='active')
+@app.route('/assignments')
+@safe_data  # Wrap the error handling first
+@cache.cached(timeout=60) # Then cache the result
+def get_assignments_fast():
+    # Change this line in get_assignments_fast:
+    courses = canvas.get_courses(enrollment_type='student', enrollment_state='active')
 
-    for course in courses:
-        # 1. Basic Course Info
-        course_info = {
-            "course_name": getattr(course, 'name', 'N/A'),
-            "assignments": [],
-            "weights": []
-        }
+    def fetch_course_data(course):
+        try:
+            # Check if course has a name to ensure it's a valid object
+            course_name = getattr(course, 'name', 'Unknown Course')
+            
+            # Explicitly pull assignments
+            assignments = course.get_assignments()
+            
+            results = []
+            for a in assignments:
+                results.append({
+                    "title": getattr(a, 'name', 'Untitled'),
+                    "due_at": getattr(a, 'due_at', None),
+                    "points_possible": getattr(a, 'points_possible', 0),
+                    "course": course_name
+                })
+            return results
+        except Exception as e:
+            print(f"Error fetching for course {course.id}: {e}")
+            return []
 
-        # 2. Fetch Assignments & Due Dates
-        # We only pull 'published' assignments that students can actually see
-        assignments = course.get_assignments()
-        for assignment in assignments:
-            course_info["assignments"].append({
-                "title": assignment.name,
-                "due_at": assignment.due_at,
-                "points_possible": assignment.points_possible
-            })
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(fetch_course_data, courses))
 
-        # 3. Fetch Weights (Assignment Groups)
-        # This shows if "Exams" are 40%, "Homework" is 20%, etc.
-        groups = course.get_assignment_groups()
-        for group in groups:
-            course_info["weights"].append({
-                "group_name": group.name,
-                "group_weight": group.group_weight
-            })
+    all_assignments = [a for r in results for a in r]
 
-        all_data.append(course_info)
+    return jsonify(all_assignments)
 
-    return jsonify(all_data)
+@app.route('/refresh-assignments')
+def refresh_assignments():
+    cache.delete_memoized(get_assignments_fast)
+    return {"status": "cleared"}
 
 @app.route('/schedule')
 def get_schedule():
@@ -143,7 +154,6 @@ def get_profile():
         return jsonify({"error": str(e)}), 500
 
 
-
 if __name__ == '__main__':
-    # Starts the local server on http://127.0.0.1:5000
+    # Starts the local server on http://127.0.0.1:5001
     app.run(debug=True, port=5001)
