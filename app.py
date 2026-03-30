@@ -10,7 +10,7 @@ CORS(app) # This allows any website to "talk" to your API
 
 # CONFIGURATION
 CANVAS_URL = "https://auburn.instructure.com" # Replace this
-CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") or "4~NGQuxULC9yQRYKTePWFanneez4ACvVKMNJz2KRV6Nan4RAty636ZQAea379FLYtA"
+CANVAS_API_KEY = os.getenv("CANVAS_API_KEY") 
 
 cache = Cache(app, config={
     'CACHE_TYPE': 'SimpleCache',
